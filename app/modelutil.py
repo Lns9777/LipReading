@@ -65,9 +65,15 @@ from tensorflow.keras.layers import Conv3D, LSTM, Dense, Dropout, Bidirectional,
     
 #     return model
 
-def load_model() -> Sequential:
-    model = Sequential()
+import os
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv3D, Activation, MaxPool3D, TimeDistributed, Flatten, Bidirectional, LSTM, Dropout, Dense
 
+
+def load_model() -> Sequential:
+    # Build the model architecture
+    model = Sequential()
     model.add(Conv3D(128, 3, input_shape=(75, 46, 140, 1), padding='same'))
     model.add(Activation('relu'))
     model.add(MaxPool3D((1, 2, 2)))
@@ -83,13 +89,20 @@ def load_model() -> Sequential:
     model.add(TimeDistributed(Flatten()))
 
     model.add(Bidirectional(LSTM(128, kernel_initializer='Orthogonal', return_sequences=True)))
-    model.add(Dropout(.5))
+    model.add(Dropout(0.5))
 
     model.add(Bidirectional(LSTM(128, kernel_initializer='Orthogonal', return_sequences=True)))
-    model.add(Dropout(.5))
+    model.add(Dropout(0.5))
 
     model.add(Dense(41, kernel_initializer='he_normal', activation='softmax'))
 
-    model.load_weights(os.path.join('models - checkpoint 96', 'checkpoint'))
-    
+    # Restore weights from TensorFlow checkpoint
+    checkpoint_dir = os.path.join('models - checkpoint 96')
+    ckpt = tf.train.Checkpoint(model=model)
+    latest = tf.train.latest_checkpoint(checkpoint_dir)
+    if latest is None:
+        raise FileNotFoundError(f"No TensorFlow checkpoint found in {checkpoint_dir}")
+    ckpt.restore(latest).expect_partial()
+
     return model
+
